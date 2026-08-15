@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-navy-950: #001845;
+  --color-navy-900: #00296b;
+  --color-navy-800: #003f88;
+  --color-navy-700: #00509d;
+  --color-navy-600: #0066c0;
+  --color-navy-500: #0080e0;
+  --color-navy-400: #3399e8;
+  --color-navy-300: #66b3f0;
+  --color-navy-200: #99ccf5;
+  --color-navy-100: #cce6fa;
+  --color-navy-50: #e6f3fd;
+
+  --color-gold-500: #fdc500;
+  --color-gold-400: #ffd500;
+  --color-gold-300: #ffdd33;
+  --color-gold-200: #ffe666;
+  --color-gold-100: #fff2b3;
+  --color-gold-50: #fff9e6;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  --color-success-500: #22c55e;
+  --color-success-100: #dcfce7;
+  --color-error-500: #ef4444;
+  --color-error-100: #fee2e2;
+  --color-warning-500: #f59e0b;
+  --color-warning-100: #fef3c7;
+
+  --font-heading: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-slate-50);
+  color: var(--color-slate-800);
+  min-height: 100dvh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+input, select, textarea, button {
+  font-family: var(--font-body);
+}
+
+button,
+[role="button"],
+a,
+label,
+select,
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+tr[data-action] {
+  cursor: pointer;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 80, 157, 0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(0, 80, 157, 0); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+
+.animate-progress-fill {
+  animation: progress-fill 1.5s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+@keyframes count-up {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-count {
+  animation: count-up 0.3s ease-out forwards;
 }
