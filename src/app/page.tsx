@@ -1097,8 +1097,10 @@ function SessionsTable({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5">
-        <h2 className="font-heading text-base font-bold text-navy-900">Recent sessions</h2>
+      <div className="border-b border-slate-100 p-4 sm:p-5">
+        <div className="mb-3 sm:mb-0 sm:flex sm:items-center sm:justify-between">
+          <h2 className="font-heading text-base font-bold text-navy-900">Recent sessions</h2>
+        </div>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {["all", "settled", "captured", "pending", "failed"].map((f) => (
             <button
@@ -1125,9 +1127,7 @@ function SessionsTable({
               <th className="px-4 py-3 font-medium sm:px-5">Duration</th>
               <th className="px-4 py-3 font-medium sm:px-5">Energy</th>
               <th className="px-4 py-3 font-medium sm:px-5">Total</th>
-              <th className="px-4 py-3 font-medium sm:px-5">Card</th>
-              <th className="px-4 py-3 font-medium sm:px-5">Payment</th>
-              <th className="px-4 py-3 font-medium sm:px-5">Settlement</th>
+              <th className="px-4 py-3 font-medium sm:px-5">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -1151,14 +1151,11 @@ function SessionsTable({
                 </td>
                 <td className="px-4 py-3 font-medium text-navy-800 sm:px-5">{tx.kWh} kWh</td>
                 <td className="px-4 py-3 font-semibold text-navy-900 sm:px-5">{formatAUD(tx.total)}</td>
-                <td className="px-4 py-3 text-slate-600 sm:px-5">
-                  {tx.cardBrand} &middot; {tx.cardLast4}
-                </td>
                 <td className="px-4 py-3 sm:px-5">
-                  <StatusBadge status={tx.paymentStatus} />
-                </td>
-                <td className="px-4 py-3 sm:px-5">
-                  <StatusBadge status={tx.settlementStatus} />
+                  <div className="flex flex-col gap-1">
+                    <StatusBadge status={tx.paymentStatus} />
+                    <StatusBadge status={tx.settlementStatus} />
+                  </div>
                 </td>
               </tr>
             ))}
