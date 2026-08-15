@@ -23,7 +23,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install
-      - run: npx next build
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /bk-charging
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out
