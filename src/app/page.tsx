@@ -24,7 +24,7 @@ import {
   Shield,
   Trash2,
   AlertTriangle,
-  X,
+  ArrowRight,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -37,6 +37,28 @@ type Card = {
   isDefault: boolean;
 };
 
+type Transaction = {
+  id: string;
+  chargerId: string;
+  chargerName: string;
+  chargerLocation: string;
+  chargerPower: string;
+  connector: string;
+  rate: number;
+  kWh: number;
+  total: number;
+  gst: number;
+  subtotal: number;
+  cardBrand: string;
+  cardLast4: string;
+  duration: string;
+  startedAt: string;
+  endedAt: string;
+  paymentStatus: "authorised" | "captured" | "settled" | "failed";
+  settlementStatus: "pending" | "processing" | "paid" | "failed";
+  timeline: { label: string; time: string; done: boolean }[];
+};
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const CHARGERS = [
@@ -45,30 +67,30 @@ const CHARGERS = [
     name: "Supercharger A4",
     location: "71 Macquarie St, Sydney",
     power: "150 kW",
-    price: "$0.42/kWh",
+    price: 0.42,
     status: "available" as const,
     estimatedTime: "~22 min",
-    network: "Chargefox",
+    connector: "CCS2",
   },
   {
     id: "CHG-0038",
     name: "Fast Charger B2",
     location: "71 Macquarie St, Sydney",
     power: "50 kW",
-    price: "$0.38/kWh",
+    price: 0.38,
     status: "available" as const,
     estimatedTime: "~45 min",
-    network: "Chargefox",
+    connector: "CHAdeMO",
   },
   {
     id: "CHG-0055",
     name: "Rapid Charger C1",
     location: "71 Macquarie St, Sydney",
     power: "350 kW",
-    price: "$0.52/kWh",
+    price: 0.52,
     status: "in-use" as const,
     estimatedTime: "~12 min",
-    network: "Chargefox",
+    connector: "CCS2",
   },
 ];
 
@@ -77,81 +99,144 @@ const SAVED_CARDS = [
   { id: "mc-1", brand: "Mastercard", last4: "8888", expiry: "12/26", isDefault: false },
 ];
 
-const OPERATOR_SESSIONS = [
+const EXISTING_TRANSACTIONS: Transaction[] = [
   {
     id: "SES-20260814-001",
-    driver: "Alex M.",
-    charger: "A4",
+    chargerId: "CHG-0041",
+    chargerName: "Supercharger A4",
+    chargerLocation: "71 Macquarie St, Sydney",
+    chargerPower: "150 kW",
     connector: "CCS2",
-    start: "14:22",
-    end: "14:48",
-    duration: "26 min",
-    kWh: 38.4,
     rate: 0.42,
+    kWh: 38.4,
     total: 16.13,
-    paymentStatus: "settled" as const,
-    settlementStatus: "paid" as const,
+    gst: 1.47,
+    subtotal: 14.66,
+    cardBrand: "Visa",
     cardLast4: "4242",
+    duration: "26 min",
+    startedAt: "14:22",
+    endedAt: "14:48",
+    paymentStatus: "settled",
+    settlementStatus: "paid",
+    timeline: [
+      { label: "Payment authorised", time: "14:22", done: true },
+      { label: "Charging started", time: "14:22", done: true },
+      { label: "Session ended", time: "14:48", done: true },
+      { label: "Payment captured", time: "14:48", done: true },
+      { label: "Receipt issued", time: "14:48", done: true },
+      { label: "Operator payout", time: "15 Aug", done: true },
+    ],
   },
   {
     id: "SES-20260814-002",
-    driver: "Sam K.",
-    charger: "B2",
+    chargerId: "CHG-0038",
+    chargerName: "Fast Charger B2",
+    chargerLocation: "71 Macquarie St, Sydney",
+    chargerPower: "50 kW",
     connector: "CHAdeMO",
-    start: "14:35",
-    end: "15:20",
-    duration: "45 min",
-    kWh: 41.2,
     rate: 0.38,
+    kWh: 41.2,
     total: 15.66,
-    paymentStatus: "pending" as const,
-    settlementStatus: "pending" as const,
+    gst: 1.42,
+    subtotal: 14.24,
+    cardBrand: "Mastercard",
     cardLast4: "8888",
+    duration: "45 min",
+    startedAt: "14:35",
+    endedAt: "15:20",
+    paymentStatus: "captured",
+    settlementStatus: "pending",
+    timeline: [
+      { label: "Payment authorised", time: "14:35", done: true },
+      { label: "Charging started", time: "14:35", done: true },
+      { label: "Session ended", time: "15:20", done: true },
+      { label: "Payment captured", time: "15:20", done: true },
+      { label: "Receipt issued", time: "15:20", done: true },
+      { label: "Operator payout", time: "Pending", done: false },
+    ],
   },
   {
     id: "SES-20260814-003",
-    driver: "Jordan L.",
-    charger: "C1",
+    chargerId: "CHG-0055",
+    chargerName: "Rapid Charger C1",
+    chargerLocation: "71 Macquarie St, Sydney",
+    chargerPower: "350 kW",
     connector: "CCS2",
-    start: "15:01",
-    end: "15:12",
-    duration: "11 min",
-    kWh: 22.7,
     rate: 0.52,
+    kWh: 22.7,
     total: 11.80,
-    paymentStatus: "settled" as const,
-    settlementStatus: "paid" as const,
+    gst: 1.07,
+    subtotal: 10.73,
+    cardBrand: "Visa",
     cardLast4: "1234",
+    duration: "11 min",
+    startedAt: "15:01",
+    endedAt: "15:12",
+    paymentStatus: "settled",
+    settlementStatus: "paid",
+    timeline: [
+      { label: "Payment authorised", time: "15:01", done: true },
+      { label: "Charging started", time: "15:01", done: true },
+      { label: "Session ended", time: "15:12", done: true },
+      { label: "Payment captured", time: "15:12", done: true },
+      { label: "Receipt issued", time: "15:12", done: true },
+      { label: "Operator payout", time: "15 Aug", done: true },
+    ],
   },
   {
     id: "SES-20260814-004",
-    driver: "Taylor R.",
-    charger: "A4",
+    chargerId: "CHG-0041",
+    chargerName: "Supercharger A4",
+    chargerLocation: "71 Macquarie St, Sydney",
+    chargerPower: "150 kW",
     connector: "CCS2",
-    start: "15:15",
-    end: "15:41",
-    duration: "26 min",
-    kWh: 35.9,
     rate: 0.42,
+    kWh: 35.9,
     total: 15.08,
-    paymentStatus: "settled" as const,
-    settlementStatus: "pending" as const,
+    gst: 1.37,
+    subtotal: 13.71,
+    cardBrand: "Visa",
     cardLast4: "5678",
+    duration: "26 min",
+    startedAt: "15:15",
+    endedAt: "15:41",
+    paymentStatus: "settled",
+    settlementStatus: "pending",
+    timeline: [
+      { label: "Payment authorised", time: "15:15", done: true },
+      { label: "Charging started", time: "15:15", done: true },
+      { label: "Session ended", time: "15:41", done: true },
+      { label: "Payment captured", time: "15:41", done: true },
+      { label: "Receipt issued", time: "15:41", done: true },
+      { label: "Operator payout", time: "Pending", done: false },
+    ],
   },
   {
     id: "SES-20260814-005",
-    driver: "Casey W.",
-    charger: "B2",
+    chargerId: "CHG-0038",
+    chargerName: "Fast Charger B2",
+    chargerLocation: "71 Macquarie St, Sydney",
+    chargerPower: "50 kW",
     connector: "CHAdeMO",
-    start: "15:30",
-    end: "16:08",
-    duration: "38 min",
-    kWh: 36.1,
     rate: 0.38,
+    kWh: 36.1,
     total: 13.72,
-    paymentStatus: "failed" as const,
-    settlementStatus: "failed" as const,
+    gst: 1.25,
+    subtotal: 12.47,
+    cardBrand: "Visa",
     cardLast4: "9012",
+    duration: "38 min",
+    startedAt: "15:30",
+    endedAt: "16:08",
+    paymentStatus: "failed",
+    settlementStatus: "failed",
+    timeline: [
+      { label: "Payment authorised", time: "15:30", done: true },
+      { label: "Charging started", time: "15:30", done: true },
+      { label: "Session ended", time: "16:08", done: true },
+      { label: "Payment failed", time: "16:08", done: true },
+    ],
   },
 ];
 
@@ -188,20 +273,37 @@ const RECONCILIATION_BATCHES = [
   },
 ];
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function isCardExpiringSoon(expiry: string): boolean {
+  const [month, year] = expiry.split("/").map(Number);
+  const expiryDate = new Date(2000 + year, month);
+  const now = new Date();
+  const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  return expiryDate <= thirtyDays;
+}
+
+function formatAUD(amount: number): string {
+  return "$" + amount.toFixed(2);
+}
+
 // ─── Shared Components ───────────────────────────────────────────────────────
 
 function StatusBadge({
   status,
   size = "sm",
 }: {
-  status: "available" | "in-use" | "settled" | "pending" | "failed" | "paid" | "partial" | "matched";
+  status: "available" | "in-use" | "settled" | "pending" | "failed" | "paid" | "partial" | "matched" | "authorised" | "captured" | "processing";
   size?: "sm" | "md";
 }) {
   const config = {
     available: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", label: "Available" },
     "in-use": { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", label: "In use" },
+    authorised: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500", label: "Authorised" },
+    captured: { bg: "bg-violet-50", text: "text-violet-700", dot: "bg-violet-500", label: "Captured" },
     settled: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", label: "Settled" },
     pending: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", label: "Pending" },
+    processing: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500", label: "Processing" },
     failed: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500", label: "Failed" },
     paid: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", label: "Paid" },
     partial: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", label: "Partial" },
@@ -321,7 +423,7 @@ function ChargerSelect({ onSelect }: { onSelect: (charger: (typeof CHARGERS)[0])
               </div>
               <div className="flex flex-col items-end gap-2">
                 <StatusBadge status={charger.status} />
-                <span className="text-sm font-bold text-navy-800">{charger.price}</span>
+                <span className="text-sm font-bold text-navy-800">${charger.price.toFixed(2)}/kWh</span>
               </div>
             </div>
           </button>
@@ -329,16 +431,6 @@ function ChargerSelect({ onSelect }: { onSelect: (charger: (typeof CHARGERS)[0])
       </div>
     </div>
   );
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function isCardExpiringSoon(expiry: string): boolean {
-  const [month, year] = expiry.split("/").map(Number);
-  const expiryDate = new Date(2000 + year, month);
-  const now = new Date();
-  const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  return expiryDate <= thirtyDays;
 }
 
 // ─── Driver: Payment ─────────────────────────────────────────────────────────
@@ -404,7 +496,7 @@ function Payment({
             <p className="text-xs text-slate-500">{charger.location}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-bold text-navy-800">{charger.price}</p>
+            <p className="text-sm font-bold text-navy-800">${charger.price.toFixed(2)}/kWh</p>
             <p className="text-xs text-slate-500">{charger.estimatedTime}</p>
           </div>
         </div>
@@ -528,7 +620,7 @@ function AddCardForm({
   onSaved,
 }: {
   onBack: () => void;
-  onSaved: (card: { id: string; brand: string; last4: string; expiry: string; isDefault: boolean }) => void;
+  onSaved: (card: Card) => void;
 }) {
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -749,7 +841,6 @@ function ActiveSession({
 }) {
   const [kWh, setKWh] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const rate = parseFloat(charger.price.replace(/[^0-9.]/g, ""));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -764,7 +855,7 @@ function ActiveSession({
 
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  const cost = (kWh * rate).toFixed(2);
+  const cost = (kWh * charger.price).toFixed(2);
 
   return (
     <div className="animate-fade-in">
@@ -841,20 +932,14 @@ function ActiveSession({
 // ─── Driver: Receipt ─────────────────────────────────────────────────────────
 
 function Receipt({
-  charger,
-  card,
+  transaction,
+  onViewOperator,
   onDone,
 }: {
-  charger: (typeof CHARGERS)[0];
-  card: Card | undefined;
+  transaction: Transaction;
+  onViewOperator: () => void;
   onDone: () => void;
 }) {
-  const kWh = 38.4;
-  const rate = parseFloat(charger.price.replace(/[^0-9.]/g, ""));
-  const subtotal = kWh * rate;
-  const gst = subtotal * 0.1;
-  const total = subtotal + gst;
-
   return (
     <div className="animate-fade-in">
       <div className="mb-6 text-center">
@@ -870,53 +955,53 @@ function Receipt({
       <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
           <div>
-            <p className="font-heading text-sm font-bold text-navy-900">{charger.name}</p>
-            <p className="text-xs text-slate-500">{charger.location}</p>
+            <p className="font-heading text-sm font-bold text-navy-900">{transaction.chargerName}</p>
+            <p className="text-xs text-slate-500">{transaction.chargerLocation}</p>
           </div>
-          <StatusBadge status="settled" />
+          <StatusBadge status={transaction.paymentStatus === "failed" ? "failed" : "settled"} />
         </div>
 
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Session ID</span>
-            <span className="font-medium text-navy-900">SES-20260814-001</span>
+            <span className="font-medium text-navy-900">{transaction.id}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Connector</span>
-            <span className="font-medium text-navy-900">CCS2 &middot; {charger.power}</span>
+            <span className="font-medium text-navy-900">{transaction.connector} &middot; {transaction.chargerPower}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Duration</span>
-            <span className="font-medium text-navy-900">26 min</span>
+            <span className="font-medium text-navy-900">{transaction.duration}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Energy</span>
-            <span className="font-medium text-navy-900">{kWh} kWh</span>
+            <span className="font-medium text-navy-900">{transaction.kWh} kWh</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Rate</span>
-            <span className="font-medium text-navy-900">${rate.toFixed(2)}/kWh</span>
+            <span className="font-medium text-navy-900">${transaction.rate.toFixed(2)}/kWh</span>
           </div>
         </div>
 
         <div className="mt-4 border-t border-slate-100 pt-4">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Subtotal</span>
-            <span className="font-medium text-navy-900">${subtotal.toFixed(2)}</span>
+            <span className="text-slate-500">Charging total (inc. GST)</span>
+            <span className="font-medium text-navy-900">{formatAUD(transaction.total)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">GST (10%)</span>
-            <span className="font-medium text-navy-900">${gst.toFixed(2)}</span>
+            <span className="text-slate-500">Includes GST</span>
+            <span className="font-medium text-navy-900">{formatAUD(transaction.gst)}</span>
           </div>
           <div className="mt-2 flex justify-between">
-            <span className="font-heading text-sm font-bold text-navy-900">Total</span>
-            <span className="font-heading text-lg font-bold text-navy-900">${total.toFixed(2)}</span>
+            <span className="font-heading text-sm font-bold text-navy-900">Total paid</span>
+            <span className="font-heading text-lg font-bold text-navy-900">{formatAUD(transaction.total)}</span>
           </div>
         </div>
 
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
           <CreditCard className="h-4 w-4 shrink-0" />
-          Paid with {card?.brand || "Card"} ending in {card?.last4 || "----"}
+          Paid with {transaction.cardBrand} ending in {transaction.cardLast4}
         </div>
       </div>
 
@@ -934,12 +1019,21 @@ function Receipt({
         </div>
       </div>
 
-      <button
-        onClick={onDone}
-        className="w-full rounded-xl bg-navy-800 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy-800/25 transition-all duration-200 hover:bg-navy-900 active:scale-[0.98]"
-      >
-        Done
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={onViewOperator}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-navy-800 bg-white py-3.5 text-sm font-bold text-navy-800 transition-all duration-200 hover:bg-navy-50 active:scale-[0.98]"
+        >
+          View operator record
+          <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onDone}
+          className="flex-1 rounded-xl bg-navy-800 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy-800/25 transition-all duration-200 hover:bg-navy-900 active:scale-[0.98]"
+        >
+          Done
+        </button>
+      </div>
     </div>
   );
 }
@@ -987,10 +1081,16 @@ function MetricCard({
 
 // ─── Operator: Sessions Table ────────────────────────────────────────────────
 
-function SessionsTable() {
+function SessionsTable({
+  transactions,
+  highlightId,
+}: {
+  transactions: Transaction[];
+  highlightId?: string | null;
+}) {
   const [filter, setFilter] = useState<string>("all");
 
-  const filtered = OPERATOR_SESSIONS.filter((s) => {
+  const filtered = transactions.filter((s) => {
     if (filter === "all") return true;
     return s.paymentStatus === filter;
   });
@@ -1000,7 +1100,7 @@ function SessionsTable() {
       <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5">
         <h2 className="font-heading text-base font-bold text-navy-900">Recent sessions</h2>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          {["all", "settled", "pending", "failed"].map((f) => (
+          {["all", "settled", "captured", "pending", "failed"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -1025,31 +1125,40 @@ function SessionsTable() {
               <th className="px-4 py-3 font-medium sm:px-5">Duration</th>
               <th className="px-4 py-3 font-medium sm:px-5">Energy</th>
               <th className="px-4 py-3 font-medium sm:px-5">Total</th>
-              <th className="px-4 py-3 font-medium sm:px-5">Status</th>
+              <th className="px-4 py-3 font-medium sm:px-5">Card</th>
+              <th className="px-4 py-3 font-medium sm:px-5">Payment</th>
               <th className="px-4 py-3 font-medium sm:px-5">Settlement</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filtered.map((session) => (
-              <tr key={session.id} className="transition-colors hover:bg-slate-50/50">
+            {filtered.map((tx) => (
+              <tr
+                key={tx.id}
+                className={`transition-colors hover:bg-slate-50/50 ${
+                  highlightId === tx.id ? "bg-navy-50/60 ring-1 ring-navy-200" : ""
+                }`}
+              >
                 <td className="px-4 py-3 sm:px-5">
-                  <p className="font-medium text-navy-900">{session.driver}</p>
-                  <p className="text-xs text-slate-400">{session.id.split("-").pop()}</p>
+                  <p className="font-medium text-navy-900">{tx.id.split("-").pop()}</p>
+                  <p className="text-xs text-slate-400">{tx.startedAt}</p>
                 </td>
                 <td className="px-4 py-3 sm:px-5">
-                  <p className="text-navy-800">{session.charger}</p>
-                  <p className="text-xs text-slate-400">{session.connector}</p>
+                  <p className="text-navy-800">{tx.chargerName.split(" ").pop()}</p>
+                  <p className="text-xs text-slate-400">{tx.connector}</p>
                 </td>
                 <td className="px-4 py-3 text-slate-600 sm:px-5">
-                  {session.duration}
+                  {tx.duration}
                 </td>
-                <td className="px-4 py-3 font-medium text-navy-800 sm:px-5">{session.kWh} kWh</td>
-                <td className="px-4 py-3 font-semibold text-navy-900 sm:px-5">${session.total.toFixed(2)}</td>
-                <td className="px-4 py-3 sm:px-5">
-                  <StatusBadge status={session.paymentStatus} />
+                <td className="px-4 py-3 font-medium text-navy-800 sm:px-5">{tx.kWh} kWh</td>
+                <td className="px-4 py-3 font-semibold text-navy-900 sm:px-5">{formatAUD(tx.total)}</td>
+                <td className="px-4 py-3 text-slate-600 sm:px-5">
+                  {tx.cardBrand} &middot; {tx.cardLast4}
                 </td>
                 <td className="px-4 py-3 sm:px-5">
-                  <StatusBadge status={session.settlementStatus} />
+                  <StatusBadge status={tx.paymentStatus} />
+                </td>
+                <td className="px-4 py-3 sm:px-5">
+                  <StatusBadge status={tx.settlementStatus} />
                 </td>
               </tr>
             ))}
@@ -1057,23 +1166,30 @@ function SessionsTable() {
         </table>
 
         <div className="space-y-2 md:hidden">
-          {filtered.map((session) => (
-            <div key={session.id} className="rounded-xl border border-slate-100 p-3.5">
+          {filtered.map((tx) => (
+            <div
+              key={tx.id}
+              className={`rounded-xl border p-3.5 ${
+                highlightId === tx.id
+                  ? "border-navy-200 bg-navy-50/60 ring-1 ring-navy-200"
+                  : "border-slate-100"
+              }`}
+            >
               <div className="mb-2.5 flex items-center justify-between">
                 <div>
-                  <p className="font-heading text-sm font-bold text-navy-900">{session.driver}</p>
+                  <p className="font-heading text-sm font-bold text-navy-900">{tx.id.split("-").pop()}</p>
                   <p className="text-xs text-slate-400">
-                    {session.charger} &middot; {session.connector} &middot; {session.duration}
+                    {tx.chargerName.split(" ").pop()} &middot; {tx.connector} &middot; {tx.duration}
                   </p>
                 </div>
-                <p className="font-heading text-sm font-bold text-navy-900">${session.total.toFixed(2)}</p>
+                <p className="font-heading text-sm font-bold text-navy-900">{formatAUD(tx.total)}</p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={session.paymentStatus} />
-                  <StatusBadge status={session.settlementStatus} />
+                  <StatusBadge status={tx.paymentStatus} />
+                  <StatusBadge status={tx.settlementStatus} />
                 </div>
-                <span className="text-xs text-slate-500">{session.kWh} kWh</span>
+                <span className="text-xs text-slate-500">{tx.cardBrand} &middot; {tx.cardLast4}</span>
               </div>
             </div>
           ))}
@@ -1085,6 +1201,125 @@ function SessionsTable() {
           No sessions match this filter
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Operator: Transaction Detail ────────────────────────────────────────────
+
+function TransactionDetail({
+  transaction,
+  onBack,
+}: {
+  transaction: Transaction;
+  onBack: () => void;
+}) {
+  return (
+    <div className="animate-fade-in">
+      <button onClick={onBack} className="mb-5 flex items-center gap-1 text-sm font-medium text-navy-700 hover:text-navy-900">
+        <ArrowLeft className="h-4 w-4" />
+        Back to dashboard
+      </button>
+
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-2xl font-bold text-navy-900 sm:text-3xl">
+            Transaction detail
+          </h1>
+          <StatusBadge status={transaction.paymentStatus} size="md" />
+        </div>
+        <p className="mt-1 text-sm text-slate-500">{transaction.id}</p>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="mb-4 font-heading text-sm font-bold text-slate-700">Session</h2>
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Charger</span>
+            <span className="font-medium text-navy-900">{transaction.chargerName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Connector</span>
+            <span className="font-medium text-navy-900">{transaction.connector} &middot; {transaction.chargerPower}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Duration</span>
+            <span className="font-medium text-navy-900">{transaction.duration}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Energy</span>
+            <span className="font-medium text-navy-900">{transaction.kWh} kWh</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Rate</span>
+            <span className="font-medium text-navy-900">${transaction.rate.toFixed(2)}/kWh</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="mb-4 font-heading text-sm font-bold text-slate-700">Payment</h2>
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Card</span>
+            <span className="font-medium text-navy-900">{transaction.cardBrand} ending in {transaction.cardLast4}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Charging total (inc. GST)</span>
+            <span className="font-medium text-navy-900">{formatAUD(transaction.total)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Includes GST</span>
+            <span className="font-medium text-navy-900">{formatAUD(transaction.gst)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Payment status</span>
+            <StatusBadge status={transaction.paymentStatus} />
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Settlement</span>
+            <StatusBadge status={transaction.settlementStatus} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="mb-4 font-heading text-sm font-bold text-slate-700">Transaction timeline</h2>
+        <div className="space-y-0">
+          {transaction.timeline.map((step, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                    step.done
+                      ? "bg-navy-800 text-white"
+                      : "border-2 border-slate-300 bg-white"
+                  }`}
+                >
+                  {step.done ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <div className="h-2 w-2 rounded-full bg-slate-300" />
+                  )}
+                </div>
+                {i < transaction.timeline.length - 1 && (
+                  <div
+                    className={`w-0.5 flex-1 ${
+                      step.done ? "bg-navy-200" : "bg-slate-200"
+                    }`}
+                  />
+                )}
+              </div>
+              <div className="pb-6">
+                <p className={`text-sm font-medium ${step.done ? "text-navy-900" : "text-slate-400"}`}>
+                  {step.label}
+                </p>
+                <p className="text-xs text-slate-400">{step.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1114,7 +1349,7 @@ function ReconciliationView() {
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-navy-900">
-                ${batch.receivedTotal.toFixed(2)}
+                {formatAUD(batch.receivedTotal)}
               </p>
               <p className="text-xs text-slate-500">
                 {batch.transactionCount} transactions
@@ -1128,13 +1363,13 @@ function ReconciliationView() {
                 <div className="rounded-xl bg-slate-50 p-3">
                   <p className="text-xs text-slate-500">Card network batch</p>
                   <p className="font-heading text-sm font-bold text-navy-900">
-                    ${batch.expectedTotal.toFixed(2)}
+                    {formatAUD(batch.expectedTotal)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3">
                   <p className="text-xs text-slate-500">Internal ledger</p>
                   <p className="font-heading text-sm font-bold text-navy-900">
-                    ${batch.receivedTotal.toFixed(2)}
+                    {formatAUD(batch.receivedTotal)}
                   </p>
                 </div>
               </div>
@@ -1158,7 +1393,7 @@ function ReconciliationView() {
                   <div className="mt-1 flex items-center justify-between text-sm">
                     <span className="text-slate-500">Difference</span>
                     <span className="font-medium text-red-500">
-                      ${(batch.expectedTotal - batch.receivedTotal).toFixed(2)}
+                      {formatAUD(batch.expectedTotal - batch.receivedTotal)}
                     </span>
                   </div>
                 )}
@@ -1189,7 +1424,15 @@ function ReconciliationView() {
 
 // ─── Operator Dashboard ──────────────────────────────────────────────────────
 
-function OperatorDashboard() {
+function OperatorDashboard({
+  transactions,
+  highlightId,
+  onSelectTransaction,
+}: {
+  transactions: Transaction[];
+  highlightId?: string | null;
+  onSelectTransaction: (tx: Transaction) => void;
+}) {
   const [view, setView] = useState<"overview" | "reconciliation">("overview");
 
   return (
@@ -1199,7 +1442,7 @@ function OperatorDashboard() {
           <h1 className="font-heading text-2xl font-bold text-navy-900 sm:text-3xl">
             Dashboard
           </h1>
-          <p className="mt-1 text-sm text-slate-500">14 August 2026</p>
+          <p className="mt-1 text-sm text-slate-500">15 August 2026</p>
         </div>
         <div className="flex gap-1.5">
           <button
@@ -1231,34 +1474,34 @@ function OperatorDashboard() {
             <MetricCard
               icon={Activity}
               label="Sessions today"
-              value="47"
+              value={String(transactions.length + 1)}
               change="+12%"
               changeType="positive"
             />
             <MetricCard
               icon={DollarSign}
               label="Revenue"
-              value="$1,842"
+              value={formatAUD(transactions.reduce((sum, tx) => sum + tx.total, 0) + 16.13)}
               change="+8%"
               changeType="positive"
             />
             <MetricCard
               icon={Wallet}
               label="Settled"
-              value="$1,628"
+              value={formatAUD(transactions.filter((tx) => tx.settlementStatus === "paid").reduce((sum, tx) => sum + tx.total, 0) + 16.13)}
               change="88%"
               changeType="neutral"
             />
             <MetricCard
               icon={AlertCircle}
               label="Failed"
-              value="2"
+              value={String(transactions.filter((tx) => tx.paymentStatus === "failed").length)}
               change="-33%"
               changeType="positive"
             />
           </div>
 
-          <SessionsTable />
+          <SessionsTable transactions={transactions} highlightId={highlightId} />
         </>
       ) : (
         <ReconciliationView />
@@ -1277,6 +1520,10 @@ export default function Home() {
   const [selectedCharger, setSelectedCharger] = useState<(typeof CHARGERS)[0] | null>(null);
   const [cards, setCards] = useState<Card[]>(SAVED_CARDS);
   const [selectedCardId, setSelectedCardId] = useState(SAVED_CARDS[0].id);
+  const [transactions, setTransactions] = useState<Transaction[]>(EXISTING_TRANSACTIONS);
+  const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
+  const [highlightTxId, setHighlightTxId] = useState<string | null>(null);
+  const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
 
   const selectedCard = cards.find((c) => c.id === selectedCardId);
 
@@ -1290,13 +1537,67 @@ export default function Home() {
   }, []);
 
   const handleSessionEnd = useCallback(() => {
+    if (!selectedCharger || !selectedCard) return;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const kWh = 38.4;
+    const total = parseFloat((kWh * selectedCharger.price).toFixed(2));
+    const gst = parseFloat((total / 11).toFixed(2));
+    const subtotal = parseFloat((total - gst).toFixed(2));
+
+    const tx: Transaction = {
+      id: `SES-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(transactions.length + 1).padStart(3, "0")}`,
+      chargerId: selectedCharger.id,
+      chargerName: selectedCharger.name,
+      chargerLocation: selectedCharger.location,
+      chargerPower: selectedCharger.power,
+      connector: selectedCharger.connector,
+      rate: selectedCharger.price,
+      kWh,
+      total,
+      gst,
+      subtotal,
+      cardBrand: selectedCard.brand,
+      cardLast4: selectedCard.last4,
+      duration: "26 min",
+      startedAt: timeStr,
+      endedAt: timeStr,
+      paymentStatus: "captured",
+      settlementStatus: "pending",
+      timeline: [
+        { label: "Payment authorised", time: timeStr, done: true },
+        { label: "Charging started", time: timeStr, done: true },
+        { label: "Session ended", time: timeStr, done: true },
+        { label: "Payment captured", time: timeStr, done: true },
+        { label: "Receipt issued", time: timeStr, done: true },
+        { label: "Operator payout", time: "Pending", done: false },
+      ],
+    };
+
+    setCurrentTransaction(tx);
     setDriverStep("receipt");
-  }, []);
+  }, [selectedCharger, selectedCard, transactions.length]);
 
   const handleDone = useCallback(() => {
+    if (currentTransaction) {
+      setTransactions((prev) => [currentTransaction, ...prev]);
+    }
     setDriverStep("select");
     setSelectedCharger(null);
-  }, []);
+    setCurrentTransaction(null);
+  }, [currentTransaction]);
+
+  const handleViewOperator = useCallback(() => {
+    if (currentTransaction) {
+      setTransactions((prev) => [currentTransaction, ...prev]);
+      setHighlightTxId(currentTransaction.id);
+    }
+    setActiveTab("operator");
+    setDriverStep("select");
+    setSelectedCharger(null);
+    setCurrentTransaction(null);
+  }, [currentTransaction]);
 
   const handleAddCard = useCallback((card: Card) => {
     setCards((prev) => [...prev, card]);
@@ -1327,7 +1628,11 @@ export default function Home() {
       </header>
 
       <div className="mb-6">
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar activeTab={activeTab} onTabChange={(tab) => {
+          setActiveTab(tab);
+          setHighlightTxId(null);
+          setViewingTx(null);
+        }} />
       </div>
 
       <main>
@@ -1351,12 +1656,25 @@ export default function Home() {
             {driverStep === "charging" && selectedCharger && (
               <ActiveSession charger={selectedCharger} onEnd={handleSessionEnd} />
             )}
-            {driverStep === "receipt" && selectedCharger && (
-              <Receipt charger={selectedCharger} card={selectedCard} onDone={handleDone} />
+            {driverStep === "receipt" && currentTransaction && (
+              <Receipt
+                transaction={currentTransaction}
+                onViewOperator={handleViewOperator}
+                onDone={handleDone}
+              />
             )}
           </>
+        ) : viewingTx ? (
+          <TransactionDetail
+            transaction={viewingTx}
+            onBack={() => setViewingTx(null)}
+          />
         ) : (
-          <OperatorDashboard />
+          <OperatorDashboard
+            transactions={transactions}
+            highlightId={highlightTxId}
+            onSelectTransaction={setViewingTx}
+          />
         )}
       </main>
 
