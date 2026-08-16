@@ -1097,10 +1097,8 @@ function SessionsTable({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 p-4 sm:p-5">
-        <div className="mb-3 sm:mb-0 sm:flex sm:items-center sm:justify-between">
-          <h2 className="font-heading text-base font-bold text-navy-900">Recent sessions</h2>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4 sm:p-5">
+        <h2 className="font-heading text-base font-bold text-navy-900">Recent sessions</h2>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5">
           {["all", "settled", "captured", "pending", "failed"].map((f) => (
             <button
